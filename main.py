@@ -8,7 +8,9 @@ import librosa
 import os
 from dtw import *
 
-# TODO: poprawić nazwy w macierzy kosztów i wykresie dopasowania w wywołaniu oraz nazwy dla siły onsetów dla wykresu,
+# TODO: zapisywanie do pliku wykresów onsetów oraz macierzy kosztów
+# TODO: sprawdź czy to jest:
+#  poprawić nazwy w macierzy kosztów i wykresie dopasowania w wywołaniu oraz nazwy dla siły onsetów dla wykresu,
 #  dodać wykres macierzy kosztów i dtw do compare_with_database
 
 
@@ -163,6 +165,7 @@ def compare_with_database(user_audio, database, show_user=False, show_database=F
         distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True)
 
         print(f'Distance from librosa between {user_audio} and {db_file_name}: {distance}')
+
 
 compare_with_database('user1.wav', database, True, True, True)
 
@@ -320,9 +323,9 @@ compare_with_database('user1.wav', database, True, True, True)
 # przygoować kilka zapyań żeby uzyskać wyniki dla wszystkich zapytań dla całej bazy
 
 
-
-# normalizować wartość onsetów, najwyższy = 1
-# wyświetlić macierz kosztów dla każdego nagrania z zapytaniem
+# TODO: na 20.02
+#  normalizować wartość onsetów, najwyższy = 1
+#  wyświetlić macierz kosztów dla każdego nagrania z zapytaniem
 
 
 
@@ -378,9 +381,9 @@ def match_user_to_database_fastdtw(user_onset_strength, database_onset_strength)
 
 # dla fastdtw przyklad
 
-user_audio1, user_sr1 = load_audio('user1.wav') # zapytanie podobne do piano1
-user_onset_strength1 = calculate_onset_strength(user_audio1[44100:], user_sr1)
-db_audio, db_sr = load_audio('C:/Users/gosia/OneDrive/Pulpit/FTIMSET/wav/Leveau/piano1.wav')
-db_onset_strength = calculate_onset_strength(db_audio, db_sr, False)
-distance = calculate_dtw(user_onset_strength1, db_onset_strength, True)
-print(f'Distance fastdtw between user2.wav and piano1: {distance}\n')
+# user_audio1, user_sr1 = load_audio('user1.wav') # zapytanie podobne do piano1
+# user_onset_strength1 = calculate_onset_strength(user_audio1[44100:], user_sr1)
+# db_audio, db_sr = load_audio('C:/Users/gosia/OneDrive/Pulpit/FTIMSET/wav/Leveau/piano1.wav')
+# db_onset_strength = calculate_onset_strength(db_audio, db_sr, False)
+# distance = calculate_dtw(user_onset_strength1, db_onset_strength, True)
+# print(f'Distance fastdtw between user2.wav and piano1: {distance}\n')
