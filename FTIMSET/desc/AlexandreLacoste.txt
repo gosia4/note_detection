@@ -1,0 +1,17 @@
+A Supervised Classification Algorithm For Note Onset Detection
+Alexandre Lacoste
+Douglas Eck
+
+The most promising candidate dataset we found was a publicly-available collection from Pierre
+Leveau [26]. Unfortunately, this dataset was too small and restricted for our purposes, mainly
+focusing on monophonic pieces.
+We chose to annotate our own musical pieces. To make it possible to share our annotations with
+others, we selected the publicly-available non-annotated “Ballroom” dataset from ISMIR 2004 as
+a source for our waveforms. The “Ballroom” dataset is composed of 698 wav files of approximately
+30 seconds each. Annotating the complete dataset would be too time consuming and was not
+necessary to train our model. We therefore annotated 59 random segments of 10 seconds each.
+Most of them are complex polyphonic with singing, mixed with pitched and noisy percussion.
+The labels were manually annotated using a matlab program with GUI constructed by the
+first author to allow for precise annotation of wav files. The “Ballroom” annotations as well
+as the matlab interface are available on request from the first author or at the following page:
+http://www-etud.iro.umontreal.ca/~lacostea
