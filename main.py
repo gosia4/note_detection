@@ -1,36 +1,14 @@
-import numpy as np
 import wave
-import matplotlib.pyplot as plt
 import pyaudio
-from fastdtw import fastdtw
-import dtw
-import librosa
 import os
 from dtw import *
+from onset_strength import *
+from edit_distance import *
 
 
 def load_audio(file_path):
     y, sr = librosa.load(file_path)
     return y, sr
-
-
-# siła onsetów, normalizacja od 0 do 1
-def calculate_onset_strength(y, sr, normalize=True):
-    onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
-    if normalize:
-        onset_strength = librosa.util.normalize(onset_strength)
-    return onset_strength
-
-
-def plot_onset_strength(onset_strength, db_file_name, save=False, name='name'):
-    plt.figure(figsize=(12, 6))
-    plt.plot(librosa.times_like(onset_strength), onset_strength, label='Onset Strength')
-    plt.ylabel('Onset Strength')
-    plt.xlabel('Time (s)')
-    plt.title(db_file_name)
-    if save:
-        plt.savefig(name + '.png')
-    plt.show()
 
 
 def record_audio_pyaudio(filename, duration=5, fs=44100):
@@ -62,33 +40,6 @@ def record_audio_pyaudio(filename, duration=5, fs=44100):
     return recorded_data
 
 
-# calculate dtw using fastdtw library
-def calculate_dtw(user, db, show=False, normalize=True):
-    # Ucięcie sekwencji, żeby miały tę samą długość
-    min_len = min(len(user), len(db))
-    user = user[:min_len]
-    db = db[:min_len]
-
-    #  normalize, if the speed from the user is different or the sequence is shorter
-    if normalize:
-        user = librosa.util.normalize(user)
-        db = librosa.util.normalize(db)
-    distance, path = fastdtw(user, db)
-
-    path_array = np.array(path)
-    if show:
-        plt.figure(figsize=(12, 6))
-        plt.plot(path_array[:, 0], path_array[:, 1], label='Alignment Path',
-                 color='red')  # 1 kolumna i 2 kolumna czyli dwie sekwencje
-        plt.title('DTW Alignment Path')
-        plt.xlabel('User Onset Strength Index')
-        plt.ylabel('Database Onset Strength Index')
-        plt.legend()
-        plt.show()
-
-    return distance, path
-
-
 def detect_onsets_dynamic_threshold(onset_strength, threshold_factor=0.02, fs=44100):
     onsets = []  # List with times of the onsets
 
@@ -107,87 +58,6 @@ def detect_onsets_dynamic_threshold(onset_strength, threshold_factor=0.02, fs=44
     return onsets
 
 
-# dtw for onset strength
-def calculate_dtw_librosa(user, db, file_name, show=False, save=False, normalize=True):
-    # normalize the amplitude, so that if the user sequence has different amplitude, it will match better dtw
-    # if normalize:
-    #     user = librosa.util.normalize(user)
-    #     db = librosa.util.normalize(db)
-
-    distance, path = librosa.sequence.dtw(user, db)
-
-    if show:
-        # from librosa
-        fig, ax = plt.subplots(nrows=2, sharex=True)
-        img = librosa.display.specshow(distance, x_axis='frames', y_axis='frames', ax=ax[0])
-        ax[0].set(title='DTW cost', xlabel='Noisy sequence', ylabel='Target')
-        ax[0].plot(path[:, 1], path[:, 0], label='Optimal path', color='y')
-        ax[0].legend()
-        fig.colorbar(img, ax=ax[0])
-        ax[1].plot(distance[-1, :] / path.shape[0])
-        ax[1].set(xlim=[0, db.shape[0]], ylim=[0, 2], title='Matching cost function: ' + file_name)
-        if save:
-            plt.savefig('dtw' + file_name + '.png')
-        plt.show()
-    return np.mean(distance), path
-
-
-# user - onset strength of the user file
-# db - onset strength of the database file
-# directly on user files and db files
-def calculate_dtw_librosa_onsets(user, db, file_name, show=False, save=False):
-    distance, path = librosa.sequence.dtw(user, db)
-
-    if show:
-        # from librosa
-        fig, ax = plt.subplots(nrows=2, sharex=True)
-        img = librosa.display.specshow(distance, x_axis='frames', y_axis='frames', ax=ax[0])
-        ax[0].set(title='DTW cost', xlabel='Noisy sequence', ylabel='Target')
-        ax[0].plot(path[:, 1], path[:, 0], label='Optimal path', color='y')
-        ax[0].legend()
-        fig.colorbar(img, ax=ax[0])
-        ax[1].plot(distance[-1, :] / path.shape[0])
-        # ax[1].set(xlim=[0, db.shape[0]], ylim=[0, 2], title='Matching cost function: ' + file_name)
-        ax[1].set(xlim=[0, len(db)], ylim=[0, 2], title='Matching cost function: ' + file_name)
-
-        if save:
-            plt.savefig('dtw' + file_name + '.png')
-        plt.show()
-    return np.mean(distance), path
-
-
-# better distance as an output than from calculate_dtw_librosa_onsets, but the cost matrix is not understandable
-# transpose to binary system, where each 1 means an onset
-def calculate_dtw_librosa_onsets2(user, db, file_name, show=False, save=False):
-    user_sequence = np.zeros(len(user))
-    db_sequence = np.zeros(len(user))  # length of the db files the same as the user files
-    for user_onset in user:
-        user_sequence[int(user_onset)] = 1
-    for db_onset in db:
-        if int(db_onset) < len(db_sequence):  # Checking if the index is in range
-            db_sequence[int(db_onset)] = 1
-
-    distance, path = librosa.sequence.dtw(user_sequence, db_sequence)
-
-    if show:
-        fig, ax = plt.subplots(nrows=2, sharex=True)
-        img = librosa.display.specshow(distance, x_axis='frames', y_axis='frames', ax=ax[0])
-        ax[0].set(title='DTW cost', xlabel='Noisy sequence', ylabel='Target')
-        ax[0].plot(path[:, 1], path[:, 0], label='Optimal path', color='y')
-        ax[0].legend()
-        fig.colorbar(img, ax=ax[0])
-        ax[1].plot(distance[-1, :] / path.shape[0])
-        # ax[1].set(xlim=[0, db.shape[0]], ylim=[0, 2], title='Matching cost function: ' + file_name)
-        ax[1].set(xlim=[0, len(db)], ylim=[0, 2], title='Matching cost function: ' + file_name)
-        if save:
-            plt.savefig('dtw' + file_name + '.png')
-        plt.show()
-
-    average_distance = np.mean(distance)
-
-    return average_distance, path
-
-
 # spectrum
 def calculate_and_plot_spectrum(y, sr):
     D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)  # amplituda sygnału do skali decybelowej
@@ -202,7 +72,7 @@ def get_audio_files_in_folder(folder_path):
     audio_files = []
     for root, dirs, files in os.walk(folder_path):
         for file in files:
-            if file.endswith(('.wav', '.mp3', '.ons')):
+            if file.endswith(('.wav', '.mp3', '.ons', '.onset')):
                 audio_files.append(os.path.join(root, file))
     return audio_files
 
@@ -211,6 +81,13 @@ def get_audio_files_in_folder(folder_path):
 def load_onsets(file_path):
     with open(file_path, 'r') as file:
         onsets = [float(line.strip()) for line in file]
+    return onsets
+
+
+def load_onsets_mirex(file_path):
+    with open(file_path, 'r') as file:
+        line = file.readline().strip()  # Wczytaj linię i usuń białe znaki z początku i końca
+        onsets = [float(value) for value in line.split()]  # Podziel linię na wartości i przekonwertuj je na float
     return onsets
 
 
@@ -223,6 +100,7 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
     else:
         user_onset_strength = calculate_onset_strength(user_audio1[44100:], user_sr1, True)
     detected_user_onsets = detect_onsets_dynamic_threshold(user_onset_strength)
+    # detected_user_onsets = load_onsets_mirex(user_audio)
 
     for db_entry, db_onsets_entry in zip(database, database_onsets_files):
         db_file_path = db_entry['file_path']
@@ -239,18 +117,63 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
         # without detecting onset, just onset strength
         # distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, False)
 
-        db_onsets = load_onsets(db_onsets_file_path)
+        db_onsets = load_onsets(db_onsets_file_path)  # do mojej bazy danych
+        # db_onsets = load_onsets_mirex(db_onsets_file_path) # do bazy mirex
         # first version
-        # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name)
+        # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name) #distance: -
 
-        # second version of detecting onset, binary (where the onset is then - 1)
-        distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name)
+        # second version of detecting onset, binary (where the onset is then: 1) - distance +/-
+        # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name)
+
+        # binary but with sampling (lenght of the user the same as in the database) - distance +/-
+        # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name)
+
+        # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name)  # tu trzeba pokombinować z tym Tm
+
+        distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 4.5, db_file_name)
+        # distance, path = calculate_dtw_librosa(detected_user_onsets, db_onsets,  db_file_name)
+        # własne, nowe, odległość edycyjna
+        # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name)
         if show_cost_function:
-            # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name, True, True)
-            distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, True)
-            # distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True)
+            # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name, True) # dtw - źle
+            # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False) # dtw - źle
+            distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True) # dtw - ok
+            # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name,
+            #                                                             True, False) # źle pokazuje dtw
+            # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name,
+            #                                                             True, True)
+            # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name, True)
+            # distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 4.5, db_file_name, True)
 
-        print(f'Distance from librosa between {user_audio} and {db_file_name}: {distance}')
+        print(f'Distance from librosa between {user_audio} and {db_file_name}: {distance}, mean distance: {mean_distance}')
+
+
+def compare_with_database_mirex(user_ons, database_onsets_files, show_cost_function=False):
+    detected_user_onsets = load_onsets_mirex(user_ons)
+
+    for db_onsets_entry in database_onsets_files:
+        db_onsets_file_path = db_onsets_entry['file_path']
+        db_file_name = os.path.basename(db_onsets_file_path)
+
+        db_onsets = load_onsets_mirex(db_onsets_file_path)
+
+        # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name)
+        # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name)
+
+        # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name) # nie działa
+        distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 1.8, db_file_name)
+
+        if show_cost_function:
+            # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name,
+            #                                                             True, True)
+
+            # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False)
+            # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name, True, False)
+
+            # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name, True, False)
+
+            distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 1.8,  db_file_name, True)
+        print(f'Distance from librosa between {user_ons} and {db_file_name}: {distance}')
 
 
 # Paths to .wav
@@ -265,6 +188,14 @@ database = [{'file_path': file} for file in get_audio_files_in_folder(database_f
 # .ons files
 database_onsets_files = [{'file_path': file} for file in get_audio_files_in_folder(database_onsets)]
 
+# mirex ons
+# paths
+# mirex_ons_folder = os.path.join(os.path.dirname(__file__), 'qbt-extended-onset', 'qbt-extended-onset')
+# mirex_ons_folder = r"C:\Users\gosia\OneDrive\Pulpit\qbt-extended-onset\qbt-extended-onset"
+mirex_ons_folder = r"C:\Users\gosia\OneDrive - vus.hr\Desktop\qbt-extended-onset\qbt-extended-onset"
+
+# .ons files
+mirex_ons = [{'file_path': file} for file in get_audio_files_in_folder(mirex_ons_folder)]
 
 # arguments for compare_with_database:
 # user audio,
@@ -273,6 +204,12 @@ database_onsets_files = [{'file_path': file} for file in get_audio_files_in_fold
 # True or False if show user files onset strength,
 # True or False if show database files onset strength,
 # True or False if show cost function
-compare_with_database('user3.wav', database, database_onsets_files, True, True, True)
-# compare_with_database('user1.wav', database, database_onsets_files, False, False, False)
+compare_with_database('piano1_krótsze.wav', database, database_onsets_files, False, False)
+# compare_with_database('user3.1.wav', database, database_onsets_files)
+# compare_with_database('user3.1.wav', database, database_onsets_files, False, False, True)
+# compare_with_database('002_2x_onset.ons', database, database_onsets_files, False, False, False)
 
+# z bazą danych mirex
+# compare_with_database_mirex('002_2x_onset.ons', mirex_ons)
+# compare_with_database_mirex('002_2x_onset.ons', mirex_ons, True)
+# compare_with_database('user1.wav', database, database_onsets_files, False, False, False)
