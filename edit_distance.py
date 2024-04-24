@@ -86,6 +86,154 @@ def calculate_dtw_librosa_onsets_edit_distance(user, db, file_name, show=False, 
 
     return average_distance, path
 
+# def default_cost(i,j,d):
+#     return 1
+def sub_cost(i,j,d):
+    return 1
+def ins_cost(i,j,d):
+    return 1
+def del_cost(i,j,d):
+    return 2
+def trans_cost(i,j,d):
+    return 1
+
+def edit_matrix(a,
+                b,
+                sub_cost=sub_cost,
+                ins_cost=ins_cost,
+                del_cost=del_cost,
+                trans_cost=trans_cost):
+    n = len(a)
+    m = len(b)
+    d = [[0 for j in range(0,m+1)] for i in range(0,n+1)]
+    for i in range(1,n+1):
+        d[i][0] = d[i-1][0] + del_cost(i,0,d)
+    for j in range(1,m+1):
+        d[0][j] = d[0][j-1] + ins_cost(0,j,d)
+    for i in range(1,n+1):
+        for j in range(1,m+1):
+            if a[i-1] == b[j-1]:
+                d[i][j] = d[i-1][j-1]
+            else:
+                d[i][j] = min(
+                    d[i-1][j] + del_cost(i,j,d),
+                    d[i][j-1] + ins_cost(i,j,d),
+                    d[i-1][j-1] + sub_cost(i,j,d)
+                )
+                can_transpose = (
+                    i > 2 and
+                    j > 2 and
+                    a[i-1] == b[j-2] and
+                    a[i-2] == b[j-1]
+                )
+                if can_transpose:
+                    d[i][j] = min(d[i][j], d[i-2][j-2] + trans_cost(i,j,d))
+    return d[n][m]
+
+
+#calculate_edit_distance z rysowaniem macierzy kosztów i dopasowywaniem sekwecji do ścieżki,
+# aby była jak najbardziej zbliżona do linii prostej
+
+def calculate_edit_distance2(user_sequence, db_sequence, Tm, file_name, show=False, save=False):
+    # Normalizacja sekwencji do tej samej długości
+    user_sequence = np.interp(np.linspace(0, len(user_sequence), len(db_sequence)), np.arange(len(user_sequence)),
+                              user_sequence)
+
+    distance = np.zeros((len(user_sequence) + 1, len(db_sequence) + 1))
+    path = np.zeros((len(user_sequence) + 1, len(db_sequence) + 1, 2), dtype=int)
+
+    for i in range(len(user_sequence) + 1):
+        distance[i, 0] = i * -0.5
+    for j in range(len(db_sequence) + 1):
+        distance[0, j] = j * -0.5
+
+    for i in range(1, len(user_sequence) + 1):
+        for j in range(1, len(db_sequence) + 1):
+            if user_sequence[i - 1] == db_sequence[j - 1]:
+                cost = 0.5  # Nagroda za dopasowanie
+            else:
+                if db_sequence[j - 1] != 0:
+                    ratio = user_sequence[i - 1] / db_sequence[j - 1]
+                    if 1 < ratio < Tm or 1 < 1 / ratio < Tm:
+                        cost = 0.5 - min(ratio, 1 / ratio) * Tm  # Koszt niezgodności
+                    else:
+                        cost = -0.5  # Kara za kompletne niedopasowanie
+                else:
+                    cost = -0.5  # Kara za kompletne niedopasowanie
+
+            min_cost = np.min([distance[i - 1, j] - 0.5,  # Kara za usunięcie/dodanie
+                               distance[i, j - 1] - 0.5,  # Kara za usunięcie/dodanie
+                               distance[i - 1, j - 1] + cost])
+            distance[i, j] = min_cost
+            if min_cost == distance[i - 1, j] - 0.5:  # Kara za usunięcie/dodanie
+                path[i, j] = [i - 1, j]
+            elif min_cost == distance[i, j - 1] - 0.5:  # Kara za usunięcie/dodanie
+                path[i, j] = [i, j - 1]
+            else:
+                path[i, j] = [i - 1, j - 1]
+
+    mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)
+    print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
+    plot_alignment(user_sequence, db_sequence, path, file_name)
+
+    return distance[len(user_sequence), len(db_sequence)], path, mean_distance
+
+
+def evaluate_alignment_to_line(path, user_sequence, db_sequence):
+    # Wyznaczenie współczynników prostej
+    m = (db_sequence[-1] - db_sequence[0]) / (user_sequence[-1] - user_sequence[0])
+    b = db_sequence[0] - m * user_sequence[0]
+
+    distances = []
+    for i in range(len(path)):
+        for j in range(len(path[i])):
+            if i < len(user_sequence) and j < len(db_sequence):  # Check for valid indices
+                x, y = path[i, j]
+
+                x_user = user_sequence[x]
+                y_user = db_sequence[y]
+                distance = np.abs(y_user - (m * x_user + b))
+                distances.append(distance)
+            else:
+                pass
+    mean_distance = np.mean(distances)
+
+    return mean_distance
+
+
+def plot_alignment(user_sequence, db_sequence, path, filename):
+    """
+    Rysuje wykres najlepszego dopasowania sekwencji użytkownika i sekwencji z bazy danych.
+
+    Args:
+        user_sequence (np.ndarray): Sekwencja użytkownika.
+        db_sequence (np.ndarray): Sekwencja z bazy danych.
+        path (np.ndarray): Macierz ścieżki dopasowania.
+
+    Returns:
+        None
+    """
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Rysowanie sekwencji użytkownika
+    ax.plot(user_sequence, label='Sekwencja użytkownika', color='blue')
+
+    # Rysowanie sekwencji z bazy danych
+    ax.plot(db_sequence, label='Sekwencja z bazy danych: ' + filename, color='green')
+
+    # Rysowanie ścieżki dopasowania
+    x_path = [x[0] for x in path[:, 1:]]
+    y_path = [x[1] for x in path[:, 1:]]
+    ax.plot(x_path, y_path, color='red', linewidth=2, alpha=0.7)
+
+    # Dodanie legendy i tytułu
+    ax.legend()
+    ax.set_title('Najlepsze dopasowanie sekwencji')
+
+    # Wyświetlenie wykresu
+    plt.show()
+
 
 def calculate_edit_distance(user_sequence, db_sequence, Tm, file_name, show=False, save=False):
     # Inicjalizacja macierzy odległości, +1 dla przypadku gdy byłby pusty sequence
@@ -168,184 +316,6 @@ def calculate_edit_distance(user_sequence, db_sequence, Tm, file_name, show=Fals
 
     # Zwrócenie odległości edycyjnej (ostatnia komórka macierzy) i ścieżki (None bo nie jest wykorzystywana)
     return distance[len(user_sequence), len(db_sequence)], path
-
-
-#calculate_edit_distance z rysowaniem macierzy kosztów i dopasowywaniem sekwecji do ścieżki, aby była jak najbardziej zbliżona do linii prostej
-def calculate_edit_distance2(user_sequence, db_sequence, Tm, file_name, show=False, save=False):
-    # Inicjalizacja macierzy odległości, +1 dla przypadku gdy byłby pusty sequence
-    distance = np.zeros((len(user_sequence) + 1, len(db_sequence) + 1))
-    path = np.zeros((len(user_sequence) + 1, len(db_sequence) + 1, 2), dtype=int)
-
-    # Obliczenie kosztów wstawiania i usuwania:
-    # Koszty wstawiania i usuwania - odległość od pustej sekwencji, czyli wstawienie lub usunięcie wszystkich elementów.
-    for i in range(len(user_sequence) + 1):
-        distance[i, 0] = i
-    for j in range(len(db_sequence) + 1):
-        distance[0, j] = j
-
-    for i in range(len(user_sequence)):
-        noise = np.random.uniform(0, 0.2)
-        user_sequence[i] += noise  # Dodawanie szumu do aktualnej wartości sekwencji użytkownika
-
-    # Obliczanie odległości edycyjnej
-    # for i in range(1, len(user_sequence) + 1):
-    #     for j in range(1, len(db_sequence) + 1):
-    #         if user_sequence[i - 1] == db_sequence[j - 1]:
-    #             cost = 0  # Dopasowanie - identyczne to jest 0
-    #         else:
-    #             if db_sequence[j - 1] != 0:
-    #                 # Obliczanie kosztu zastąpienia - proporcja IOI z artykułu
-    #                 ratio = user_sequence[i - 1] / db_sequence[j - 1]
-    #                 if 1 < ratio < Tm or 1 < 1 / ratio < Tm:
-    #                     cost = 1 - min(ratio, 1 / ratio)  # wybieramy wartość mniejszą, albo ratio, albo 1/ratio
-    #                 else:
-    #                     cost = 1  # Koszt zastąpienia
-    #             else:
-    #                 cost = 1  # Koszt zastąpienia, gdy db_sequence[j - 1] == 0
-    # Obliczanie odległości edycyjnej
-    for i in range(1, len(user_sequence) + 1):
-        for j in range(1, len(db_sequence) + 1):
-            if user_sequence[i - 1] == db_sequence[j - 1]:
-                cost = 0.5  # Koszt dopasowania
-            else:
-                if db_sequence[j - 1] != 0:
-                    # Obliczanie kosztu zastąpienia - proporcja IOI z artykułu
-                    ratio = user_sequence[i - 1] / db_sequence[j - 1]
-                    if 1 < ratio < Tm or 1 < 1 / ratio < Tm:
-                        cost = 0.5 - min(ratio, 1 / ratio)  # Koszt niezgodności
-                    else:
-                        cost = -0.5  # Koszt zastąpienia
-                else:
-                    cost = -0.5  # Koszt zastąpienia, gdy db_sequence[j - 1] == 0
-
-            # Obliczenie kosztu edycji dla danej komórki
-            # min_cost = np.min([distance[i - 1, j] + 1,  # Usunięcie (pomijanie elementu sekwencji)
-            #                    distance[i, j - 1] + 1,  # Wstawienie - dodanie nowego elementu do jednej sekwencji
-            #                    distance[i - 1, j - 1] + cost])  # Zastąpienie -zamianę jednego elementu na inny
-            min_cost = np.min([distance[i - 1, j] - 0.5,  # Usunięcie (pomijanie elementu sekwencji)
-                               distance[i, j - 1] - 0.5,  # Wstawienie - dodanie nowego elementu do jednej sekwencji
-                               distance[i - 1, j - 1] + cost])
-
-            distance[i, j] = min_cost
-
-
-            # path
-            if min_cost == distance[i - 1, j] + 1:
-                path[i, j] = [i - 1, j]
-                # print(f"Appending to path: {[i - 1, j]}")  # Add this line
-            elif min_cost == distance[i, j - 1] + 1:
-                path[i, j] = [i, j - 1]
-            else:
-                path[i, j] = [i - 1, j - 1]
-    print(f"user_sequence length: {len(user_sequence)}")
-    print(f"db_sequence length: {len(db_sequence)}")
-    print(f"path shape: {path.shape}")
-    # if show:
-    #     # Rysowanie macierzy kosztów
-    #     fig, ax = plt.subplots()
-    #     ax.imshow(distance, cmap='viridis', interpolation='nearest')
-    #     ax.set_title('Cost Matrix')
-    #     ax.set_xlabel('User Sequence')
-    #     ax.set_ylabel('Database Sequence: ' + file_name)
-    #     if save:
-    #         plt.savefig('dtw' + file_name + '.png')
-    #     plt.show()
-    # plot_alignment(user_sequence, db_sequence, path)
-
-    # Ocenianie dopasowania do prostej
-    mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)
-    print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
-
-    # Zwrócenie odległości edycyjnej, ścieżki i oceny dopasowania do prostej
-    return distance[len(user_sequence), len(db_sequence)], path, mean_distance
-
-
-def evaluate_alignment_to_line(path, user_sequence, db_sequence):
-    """
-    Ocenia dopasowanie sekwencji użytkownika do sekwencji z bazy danych na podstawie ścieżki najlepszego dopasowania.
-    Funkcja oblicza średnią odległość punktów na ścieżce od prostej łączącej początek i koniec sekwencji.
-
-    Args:
-        path (np.ndarray): Tablica zawierająca ścieżkę najlepszego dopasowania (kolumny: x, y).
-        user_sequence (np.ndarray): Sekwencja użytkownika.
-        db_sequence (np.ndarray): Sekwencja z bazy danych.
-
-    Returns:
-        float: Średnia odległość punktów na ścieżce od prostej.
-    """
-
-    # Wyznaczenie współczynników prostej
-    m = (db_sequence[-1] - db_sequence[0]) / (user_sequence[-1] - user_sequence[0])
-    b = db_sequence[0] - m * user_sequence[0]
-
-    # Obliczenie odległości punktów na ścieżce od prostej
-    # distances = []
-    # for i in range(len(path)):
-    #     for j in range(len(path[i])):
-    #         x, y = path[i, j]
-    #         # for x, y in path:
-    #         x_user = user_sequence[x]
-    #         y_user = db_sequence[y]
-    #         distance = np.abs(y_user - (m * x_user + b))
-    #         distances.append(distance)
-    distances = []
-    for i in range(len(path)):
-        for j in range(len(path[i])):
-            if i < len(user_sequence) and j < len(db_sequence):  # Check for valid indices
-                x, y = path[i, j]
-                # point = path[i]
-                # x = point[0]
-                # y = point[1]
-                # if x < len(user_sequence) and y < len(db_sequence):
-                #     x_user = user_sequence[x]
-                #     y_user = db_sequence[y]
-                #     # reszta kodu
-                # else:
-                #     pass
-                x_user = user_sequence[x]
-                y_user = db_sequence[y]
-                distance = np.abs(y_user - (m * x_user + b))
-                distances.append(distance)
-            else:
-                # Handle gaps (optional: assign a penalty value)
-                pass
-    # Obliczenie średniej odległości
-    mean_distance = np.mean(distances)
-
-    return mean_distance
-
-def plot_alignment(user_sequence, db_sequence, path):
-    """
-    Rysuje wykres najlepszego dopasowania sekwencji użytkownika i sekwencji z bazy danych.
-
-    Args:
-        user_sequence (np.ndarray): Sekwencja użytkownika.
-        db_sequence (np.ndarray): Sekwencja z bazy danych.
-        path (np.ndarray): Macierz ścieżki dopasowania.
-
-    Returns:
-        None
-    """
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Rysowanie sekwencji użytkownika
-    ax.plot(user_sequence, label='Sekwencja użytkownika', color='blue')
-
-    # Rysowanie sekwencji z bazy danych
-    ax.plot(db_sequence, label='Sekwencja z bazy danych', color='green')
-
-    # Rysowanie ścieżki dopasowania
-    x_path = [x[0] for x in path[:, 1:]]
-    y_path = [x[1] for x in path[:, 1:]]
-    ax.plot(x_path, y_path, color='red', linewidth=2, alpha=0.7)
-
-    # Dodanie legendy i tytułu
-    ax.legend()
-    ax.set_title('Najlepsze dopasowanie sekwencji')
-
-    # Wyświetlenie wykresu
-    plt.show()
 
 
 def calculate_edit_distance4(user_sequence, db_sequence, Tm, file_name, show=False, save=False):

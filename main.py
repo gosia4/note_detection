@@ -4,58 +4,7 @@ import os
 from dtw import *
 from onset_strength import *
 from edit_distance import *
-
-
-def load_audio(file_path):
-    y, sr = librosa.load(file_path)
-    return y, sr
-
-
-def record_audio_pyaudio(filename, duration=5, fs=44100):
-    print("Rozpocznij nagrywanie...")
-
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=fs, input=True, frames_per_buffer=1024)
-
-    frames = []
-    for i in range(0, int(fs / 1024 * duration)):
-        data = stream.read(1024)
-        frames.append(np.frombuffer(data, dtype=np.int16))
-
-    print("Zakończono nagrywanie.")
-
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-    recorded_data = np.concatenate(frames)
-
-    # Zapisz nagranie do pliku
-    with wave.open(filename, 'wb') as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(pyaudio.paInt16))
-        wf.setframerate(fs)
-        wf.writeframes(recorded_data.tobytes())
-
-    print(f"Nagranie zapisane w pliku: {filename}")
-    return recorded_data
-
-
-def detect_onsets_dynamic_threshold(onset_strength, threshold_factor=0.02, fs=44100):
-    onsets = []  # List with times of the onsets
-
-    # Average and standard deviation of the onsets
-    average_strength = np.mean(onset_strength)
-    std_strength = np.std(onset_strength)
-
-    # DYnamic treshlod - arythmetic mean and standard deviation
-    threshold = average_strength + threshold_factor * std_strength
-
-    # Onset detection
-    for i in range(1, len(onset_strength)):
-        if onset_strength[i] > threshold >= onset_strength[i - 1]:
-            onsets.append(librosa.frames_to_time(i, sr=fs))
-
-    return onsets
+from audio_recording import *
 
 
 # spectrum
@@ -75,13 +24,6 @@ def get_audio_files_in_folder(folder_path):
             if file.endswith(('.wav', '.mp3', '.ons', '.onset')):
                 audio_files.append(os.path.join(root, file))
     return audio_files
-
-
-# for .ons files
-def load_onsets(file_path):
-    with open(file_path, 'r') as file:
-        onsets = [float(line.strip()) for line in file]
-    return onsets
 
 
 def load_onsets_mirex(file_path):
@@ -130,22 +72,23 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
 
         # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name)  # tu trzeba pokombinować z tym Tm
 
-        distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 4.5, db_file_name)
+        distance = edit_matrix(detected_user_onsets, db_onsets)
+        # distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 2, db_file_name)
         # distance, path = calculate_dtw_librosa(detected_user_onsets, db_onsets,  db_file_name)
         # własne, nowe, odległość edycyjna
         # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name)
         if show_cost_function:
             # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name, True) # dtw - źle
             # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False) # dtw - źle
-            distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True) # dtw - ok
+            # distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True) # dtw - ok
             # distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name,
             #                                                             True, False) # źle pokazuje dtw
             # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name,
             #                                                             True, True)
             # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name, True)
-            # distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 4.5, db_file_name, True)
+            distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 2, db_file_name, True)
 
-        print(f'Distance from librosa between {user_audio} and {db_file_name}: {distance}, mean distance: {mean_distance}')
+        print(f'Distance from librosa between {user_audio} and {db_file_name}: {distance}')#, mean distance: {mean_distance}')
 
 
 def compare_with_database_mirex(user_ons, database_onsets_files, show_cost_function=False):
@@ -204,8 +147,10 @@ mirex_ons = [{'file_path': file} for file in get_audio_files_in_folder(mirex_ons
 # True or False if show user files onset strength,
 # True or False if show database files onset strength,
 # True or False if show cost function
-compare_with_database('piano1_krótsze.wav', database, database_onsets_files, False, False)
-# compare_with_database('user3.1.wav', database, database_onsets_files)
+# compare_with_database('piano1_krótsze.wav', database, database_onsets_files, False, False, False)
+# compare_with_database('user_sequences/sax1.wav', database, database_onsets_files)
+compare_with_database('user_sequences/clarinet1.wav', database, database_onsets_files)
+# compare_with_database('violin.wav', database, database_onsets_files)
 # compare_with_database('user3.1.wav', database, database_onsets_files, False, False, True)
 # compare_with_database('002_2x_onset.ons', database, database_onsets_files, False, False, False)
 
