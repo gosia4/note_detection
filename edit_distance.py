@@ -103,6 +103,9 @@ def edit_matrix(a,
                 ins_cost=ins_cost,
                 del_cost=del_cost,
                 trans_cost=trans_cost):
+
+    # a = np.interp(np.linspace(0, len(a), len(b)), np.arange(len(a)),
+    #                           a)
     n = len(a)
     m = len(b)
     d = [[0 for j in range(0,m+1)] for i in range(0,n+1)]
@@ -128,7 +131,80 @@ def edit_matrix(a,
                 )
                 if can_transpose:
                     d[i][j] = min(d[i][j], d[i-2][j-2] + trans_cost(i,j,d))
-    return d[n][m]
+    return d
+
+def traceback(a, b, d):
+  """
+  Traces back the minimum edit distance path through the edit matrix.
+
+  Args:
+      a: String a.
+      b: String b.
+      d: Edit distance matrix.
+
+  Returns:
+      A list of tuples representing the operations (insertion, deletion, substitution, transposition)
+      in the edit distance path.
+  """
+  i, j = len(a), len(b)
+  path = []
+  while i > 0 or j > 0:
+    if i > 0 and j > 0 and d[i][j] == d[i-1][j-1]:  # No change
+      path.append((0, a[i-1]))  # No change (substitution with the same character)
+      i -= 1
+      j -= 1
+    elif i > 0 and d[i][j] == d[i-1][j] + del_cost(i, j, d):  # Deletion
+      path.append((1, a[i-1]))
+      i -= 1
+    elif j > 0 and d[i][j] == d[i][j-1] + ins_cost(i, j, d):  # Insertion
+      path.append((2, b[j-1]))
+      j -= 1
+    else:
+      # Transposition
+      path.append((3, a[i-2], b[j-1]))
+      i -= 2
+      j -= 1
+  return path
+
+# def visualize_edit_distance_path(a, b, path):
+#     """
+#     Visualizes the edit distance path on a plot.
+#
+#     Args:
+#         a: String a.
+#         b: String b.
+#         path: List of tuples representing the operations in the edit distance path.
+#     """
+#     fig, ax = plt.subplots()
+#
+#     # Plot strings a and b
+#     ax.plot(range(len(a) + 1), [0] * (len(a) + 1), 'b-', label='String a')
+#     ax.plot(range(len(b) + 1), [-1] * (len(b) + 1), 'g-', label='String b')
+#
+#     # Annotate characters and operations along the path
+#     for i, (operation, *chars) in enumerate(path):  # Using extended unpacking to handle both cases
+#         if operation == 0:  # No change (substitution)
+#             ax.text(i, 0, chars[0], ha='center', va='center')
+#         elif operation == 1:  # Deletion
+#             ax.text(i, -1, chars[0], ha='center', va='center')
+#         elif operation == 2:  # Insertion
+#             ax.text(i + 0.5, -1, chars[0], ha='center', va='center')
+#         else:  # Transposition
+#             ax.text(i + 0.25, 0, chars[0], ha='center', va='center')
+#             ax.text(i + 0.75, -1, chars[1], ha='center', va='center')
+#
+#     # Set axis labels and title
+#     ax.set_xticks(range(len(a) + 1))
+#     ax.set_yticks([-1, 0])
+#     ax.set_xlabel('Position')
+#     ax.set_title('Edit Distance Path')
+#
+#     # Add legend
+#     ax.legend()
+#
+#     # Display the plot
+#     plt.show()
+
 
 
 #calculate_edit_distance z rysowaniem macierzy kosztów i dopasowywaniem sekwecji do ścieżki,
@@ -174,7 +250,7 @@ def calculate_edit_distance2(user_sequence, db_sequence, Tm, file_name, show=Fal
 
     mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)
     print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
-    plot_alignment(user_sequence, db_sequence, path, file_name)
+    # plot_alignment(user_sequence, db_sequence, path, file_name)
 
     return distance[len(user_sequence), len(db_sequence)], path, mean_distance
 
@@ -281,7 +357,6 @@ def calculate_edit_distance(user_sequence, db_sequence, Tm, file_name, show=Fals
             else:
                 path[i, j] = [i - 1, j - 1]
 
-                #TODO z librosy path:
 
     distance_librosa, path = librosa.sequence.dtw(user_sequence, db_sequence)
 
