@@ -496,9 +496,9 @@ def calculate_edit_distance3(user_sequence, db_sequence, Tm, file_name, show=Fal
             else:
                 path[i, j] = [i - 1, j - 1]
 
-    print(f"user_sequence length: {len(user_sequence)}")
-    print(f"db_sequence length: {len(db_sequence)}")
-    print(f"path shape: {path.shape}")
+    # print(f"user_sequence length: {len(user_sequence)}")
+    # print(f"db_sequence length: {len(db_sequence)}")
+    # print(f"path shape: {path.shape}")
 
     # Evaluate alignment to line
     mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)

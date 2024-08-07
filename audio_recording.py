@@ -34,3 +34,6 @@ def record_audio_pyaudio(filename, duration=10, fs=44100):
 
     print(f"Nagranie zapisane w pliku: {filename}")
     return recorded_data
+
+
+# record_audio_pyaudio("user_sequences/jaillet73.wav", 5)

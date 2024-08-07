@@ -6,7 +6,7 @@ from onset_strength import *
 from edit_distance import *
 from audio_recording import *
 
-
+# plot_onset_strength()
 # spectrum
 def calculate_and_plot_spectrum(y, sr):
     D = librosa.amplitude_to_db(np.abs(librosa.stft(y)), ref=np.max)  # amplituda sygnału do skali decybelowej
@@ -62,7 +62,7 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
         db_onsets = load_onsets(db_onsets_file_path)  # do mojej bazy danych
         # db_onsets = load_onsets_mirex(db_onsets_file_path) # do bazy mirex
         # first version
-        # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name) #distance: -
+        calculate_dtw_librosa_onsetsf, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name) #distance: -
 
         # second version of detecting onset, binary (where the onset is then: 1) - distance +/-
         distance_calculate_dtw_librosa_onsets2, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name)
@@ -83,6 +83,12 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
         distance, path = calculate_dtw_librosa(detected_user_onsets, db_onsets,  db_file_name)
         # własne, nowe, odległość edycyjna
         distance_calculate_dtw_librosa_onsets_edit_distance, path = calculate_dtw_librosa_onsets_edit_distance(detected_user_onsets, db_onsets, db_file_name)
+        calculate_dtwf = calculate_dtw(detected_user_onsets, db_onsets)
+        calculate_edit_distance3f = calculate_edit_distance3(detected_user_onsets, db_onsets, 1.8, db_file_name)
+        d4, p4, calculate_edit_distance4f = calculate_edit_distance4(detected_user_onsets, db_onsets, 1.8, db_file_name)
+
+        # do testu do pracy:
+        calculate_dtw_librosa_onsets_próbkowanief, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name)
         if show_cost_function:
             # distance, path = calculate_dtw_librosa_onsets(detected_user_onsets, db_onsets, db_file_name, True) # dtw - źle
             # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False) # dtw - źle
@@ -92,14 +98,20 @@ def compare_with_database(user_audio, database, database_onsets_files, show_user
             # distance, path = calculate_dtw_librosa_onsets_próbkowanie(detected_user_onsets, db_onsets, db_file_name,
             #                                                             True, True)
             # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name, True)
-            distance, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 2, db_file_name, True)
+            distance_calculate_edit_distance2, path, mean_distance = calculate_edit_distance2(detected_user_onsets, db_onsets, 2, db_file_name, True)
 
-        print(f'Distance from calculate_dtw_librosa_onsets_edit_distance between {user_audio} and {db_file_name}: {distance}')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_dtw_librosa between {user_audio} and {db_file_name}: {distance}')#, mean distance: {mean_distance}')
         # print(f'Distance from edit_matrix between {user_audio} and {db_file_name}: {distance_edit_matrix}')#, mean distance: {mean_distance}')
-        print(f'Distance from calculate_edit_distance2 between {user_audio} and {db_file_name}: {distance_calculate_edit_distance2}')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_edit_distance2 (aligment to the line) between {user_audio} and {db_file_name}: {distance_calculate_edit_distance2}')#, mean distance: {mean_distance}')
+        # tu jest jakiś problem, chyba lepiej usunąć tę funkcję
+        # print(f'Distance from calculate_edit_distance3 between {user_audio} and {db_file_name}: {calculate_edit_distance3f}')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_edit_distance4 between {user_audio} and {db_file_name}: {calculate_edit_distance4f}')#, mean distance: {mean_distance}')
         print(f'Distance from calculate_dtw_librosa_onsets_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets_edit_distance}')#, mean distance: {mean_distance}')
         print(f'Distance from calculate_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_edit_distance}')#, mean distance: {mean_distance}')
-        print(f'Distance from calculate_dtw_librosa_onsets2 between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets2}')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_dtw_librosa_onsets2 between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets2}\n')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_dtw_librosa_onsets between {user_audio} and {db_file_name}: {calculate_dtw_librosa_onsetsf}\n')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_dtw_librosa_onsets_próbkowanie between {user_audio} and {db_file_name}: {calculate_dtw_librosa_onsets_próbkowanief}\n')
+        print(f'Distance from calculate_dtw between {user_audio} and {db_file_name}: {calculate_dtwf}\n')
 
 
 def compare_with_database_mirex(user_ons, database_onsets_files, show_cost_function=False):
@@ -132,15 +144,20 @@ def compare_with_database_mirex(user_ons, database_onsets_files, show_cost_funct
 
 # Paths to .wav
 database_folder = os.path.join(os.path.dirname(__file__), 'FTIMSET', 'wav', 'Leveau')
+database_folder_testowy = os.path.join(os.path.dirname(__file__), 'testowy', 'wav')
 
 # Paths to .ons
 database_onsets = os.path.join(os.path.dirname(__file__), 'FTIMSET', 'ons', 'Leveau')
+database_onsets_testowy = os.path.join(os.path.dirname(__file__), 'testowy', 'ons')
 
 # .wav files
 database = [{'file_path': file} for file in get_audio_files_in_folder(database_folder)]
+database_testowy = [{'file_path': file} for file in get_audio_files_in_folder(database_folder_testowy)]
+
 
 # .ons files
 database_onsets_files = [{'file_path': file} for file in get_audio_files_in_folder(database_onsets)]
+database_onsets_files_testowy = [{'file_path': file} for file in get_audio_files_in_folder(database_onsets_testowy)]
 
 # mirex ons
 # paths
@@ -160,7 +177,11 @@ mirex_ons = [{'file_path': file} for file in get_audio_files_in_folder(mirex_ons
 # True or False if show cost function
 # compare_with_database('piano1_krótsze.wav', database, database_onsets_files, False, False, False)
 # compare_with_database('user_sequences/sax1.wav', database, database_onsets_files)
-compare_with_database('user_sequences/clarinet1.wav', database, database_onsets_files, False, False, False)
+
+# compare_with_database('user_sequences/clarinet1.wav', database, database_onsets_files, False, False, False)
+# compare_with_database('user_sequences/tamburyn.wav', database, database_onsets_files, False, False, False)
+compare_with_database('user_sequences/jaillet73.wav', database_testowy, database_onsets_files_testowy, True, False, False)
+# compare_with_database('user_sequences/distguit.wav', database, database_onsets_files, False, False, False)
 # compare_with_database('violin.wav', database, database_onsets_files)
 # compare_with_database('user3.1.wav', database, database_onsets_files, False, False, True)
 # compare_with_database('002_2x_onset.ons', database, database_onsets_files, False, False, False)

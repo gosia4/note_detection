@@ -74,7 +74,6 @@ def calculate_dtw_librosa(user_sequence, db_sequence, file_name, show=False, sav
     #     db = librosa.util.normalize(db)
 
     distance, path = librosa.sequence.dtw(user_sequence, db_sequence)
-    print("Path shape:", path.shape)
 
     if show:
         # from librosa
