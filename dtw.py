@@ -67,12 +67,7 @@ def calculate_dtw(user, db, show=False, normalize=True):
 
 
 # dtw for onset strength
-def calculate_dtw_librosa(user_sequence, db_sequence, file_name, show=False, save=False, normalize=True):
-    # normalize the amplitude, so that if the user sequence has different amplitude, it will match better dtw
-    # if normalize:
-    #     user = librosa.util.normalize(user)
-    #     db = librosa.util.normalize(db)
-
+def calculate_dtw_librosa(user_sequence, db_sequence, file_name, show=False, save=False):
     distance, path = librosa.sequence.dtw(user_sequence, db_sequence)
 
     if show:
@@ -94,31 +89,7 @@ def calculate_dtw_librosa(user_sequence, db_sequence, file_name, show=False, sav
     return np.mean(distance), path
 
 
-# user - onset strength of the user file
-# db - onset strength of the database file
-# directly on user files and db files
-def calculate_dtw_librosa_onsets(user, db, file_name, show=False, save=False):
-    distance, path = librosa.sequence.dtw(user, db)
-
-    if show:
-        # from librosa
-        fig, ax = plt.subplots(nrows=2, sharex=True)
-        img = librosa.display.specshow(distance, x_axis='frames', y_axis='frames', ax=ax[0])
-        ax[0].set(title='DTW cost', xlabel='Noisy sequence', ylabel='Target')
-        ax[0].plot(path[:, 1], path[:, 0], label='Optimal path', color='y')
-        ax[0].legend()
-        fig.colorbar(img, ax=ax[0])
-        ax[1].plot(distance[-1, :] / path.shape[0])
-        # ax[1].set(xlim=[0, db.shape[0]], ylim=[0, 2], title='Matching cost function: ' + file_name)
-        ax[1].set(xlim=[0, len(db)], ylim=[0, 2], title='Matching cost function: ' + file_name)
-
-        if save:
-            plt.savefig('dtw' + file_name + '.png')
-        plt.show()
-    return np.mean(distance), path
-
-
-# better distance as an output than from calculate_dtw_librosa_onsets, but the cost matrix is not understandable
+# better distance as an output than from calculate_dtw_librosa, but the cost matrix is not understandable
 # transpose to binary system, where each 1 means an onset
 def calculate_dtw_librosa_onsets2(user, db, file_name, show=False, save=False):
     # if len(user) == 0 or len(db) == 0:
@@ -169,7 +140,7 @@ def calculate_dtw_librosa_onsets2(user, db, file_name, show=False, save=False):
 
 
 # dopasowanie długości sekwencji użytkownika do długości w bazie danych
-def calculate_dtw_librosa_onsets_próbkowanie(user, db, file_name, show=False, save=False):
+def calculate_dtw_librosa_onsets_sampling(user, db, file_name, show=False, save=False):
     max_db_index = len(db)
     # tworzenie sekwencji o długości max, która jest a bazie danych
     user_sequence = np.zeros(max_db_index)

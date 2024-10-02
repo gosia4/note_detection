@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 
-
+# dtw i edit distance
 def calculate_dtw_librosa_onsets_edit_distance(user, db, file_name, show=False, save=False):
     user_sequence = np.zeros(len(user))
     db_sequence = np.zeros(len(db))  # length of db, or should length of the db files be the same as the user files???
@@ -33,7 +33,7 @@ def calculate_dtw_librosa_onsets_edit_distance(user, db, file_name, show=False, 
     for i in range(len(user_sequence)):
         for j in range(len(db_sequence)):
             distance[i, j] = abs(user_sequence[i] - db_sequence[
-                j])  # Edit distance measure (wartość bezwzględna z odległości między sekwencjami
+                j])  # Edit distance measure (wartość bezwzględna z odległości między sekwencjami)
 
     # Calculate cumulative cost matrix
     for i in range(1, len(user_sequence)):
@@ -440,13 +440,9 @@ def calculate_edit_distance4(user_sequence, db_sequence, Tm, file_name, show=Fal
             else:
                 path[i, j] = [i - 1, j - 1]
 
-    print(f"user_sequence length: {len(user_sequence)}")
-    print(f"db_sequence length: {len(db_sequence)}")
-    print(f"path shape: {path.shape}")
-
     # Evaluate alignment to line
     mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)
-    print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
+    # print(f"calcultate_edit_distance4, Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
 
     # Return edit distance, path, and alignment to line score
     return distance[len(user_sequence), len(db_sequence)], path, mean_distance

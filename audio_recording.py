@@ -36,4 +36,4 @@ def record_audio_pyaudio(filename, duration=10, fs=44100):
     return recorded_data
 
 
-# record_audio_pyaudio("user_sequences/jaillet73.wav", 5)
+# record_audio_pyaudio("user_sequences/tabla.wav", 9)
