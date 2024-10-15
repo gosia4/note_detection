@@ -107,7 +107,7 @@ def calculate_dtw_librosa_onsets2(user, db, file_name, show=False, save=False):
         # Generate a random number between 0 and 1
         random_value = np.random.rand()
         # Choose a threshold, for example 0.8????
-        threshold = 0.8
+        threshold = 0.1
         # If the random value is greater than the threshold, set the onset
         if random_value > threshold:
             user_sequence[i] = 1

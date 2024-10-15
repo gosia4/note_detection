@@ -11,7 +11,7 @@ def calculate_dtw_librosa_onsets_edit_distance(user, db, file_name, show=False, 
     # Add random disturbance to the user sequence, so that when the user claps not precisely
     for i in range(len(user_sequence)):
         # random number between 0 and 0.2
-        random_value = np.random.uniform(0, 0.2)
+        random_value = np.random.uniform(0, 1)
 
         # Choose a threshold, for example 0.8
         threshold = 0.8
@@ -249,10 +249,11 @@ def calculate_edit_distance2(user_sequence, db_sequence, Tm, file_name, show=Fal
                 path[i, j] = [i - 1, j - 1]
 
     mean_distance = evaluate_alignment_to_line(path[:, :, :2], user_sequence, db_sequence)
-    print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
+    # print(f"Średnia odległość punktów na ścieżce od prostej: {mean_distance}")
     # plot_alignment(user_sequence, db_sequence, path, file_name)
 
-    return distance[len(user_sequence), len(db_sequence)], path, mean_distance
+    # return distance[len(user_sequence), len(db_sequence)], path, mean_distance
+    return mean_distance
 
 
 def evaluate_alignment_to_line(path, user_sequence, db_sequence):
@@ -275,41 +276,6 @@ def evaluate_alignment_to_line(path, user_sequence, db_sequence):
     mean_distance = np.mean(distances)
 
     return mean_distance
-
-
-def plot_alignment(user_sequence, db_sequence, path, filename):
-    """
-    Rysuje wykres najlepszego dopasowania sekwencji użytkownika i sekwencji z bazy danych.
-
-    Args:
-        user_sequence (np.ndarray): Sekwencja użytkownika.
-        db_sequence (np.ndarray): Sekwencja z bazy danych.
-        path (np.ndarray): Macierz ścieżki dopasowania.
-
-    Returns:
-        None
-    """
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Rysowanie sekwencji użytkownika
-    ax.plot(user_sequence, label='Sekwencja użytkownika', color='blue')
-
-    # Rysowanie sekwencji z bazy danych
-    ax.plot(db_sequence, label='Sekwencja z bazy danych: ' + filename, color='green')
-
-    # Rysowanie ścieżki dopasowania
-    x_path = [x[0] for x in path[:, 1:]]
-    y_path = [x[1] for x in path[:, 1:]]
-    ax.plot(x_path, y_path, color='red', linewidth=2, alpha=0.7)
-
-    # Dodanie legendy i tytułu
-    ax.legend()
-    ax.set_title('Najlepsze dopasowanie sekwencji')
-
-    # Wyświetlenie wykresu
-    plt.show()
-
 
 def calculate_edit_distance(user_sequence, db_sequence, Tm, file_name, show=False, save=False):
     # Inicjalizacja macierzy odległości, +1 dla przypadku gdy byłby pusty sequence

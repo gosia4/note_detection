@@ -41,7 +41,8 @@ def compare_with_database(user_audio, database, show_user=False, show_database=F
     else:
         user_onset_strength = calculate_onset_strength(user_audio1[44100:], user_sr1, True)
     detected_user_onsets = detect_onsets_dynamic_threshold(user_onset_strength)
-
+    # plot_onset_strength(user_onset_strength, "User Audio")
+    distances = []
     for db_entry in database:
         db_file_path = db_entry['file_path']
         db_audio, db_sr = load_audio(db_file_path)
@@ -54,8 +55,8 @@ def compare_with_database(user_audio, database, show_user=False, show_database=F
 
         db_onsets = detect_onsets_dynamic_threshold(onset_strength)
 
-        # calculate_edit_distance4f, p4, md4 = calculate_edit_distance4(detected_user_onsets, db_onsets, 1.8,
-        #                                                               db_file_name)
+        calculate_edit_distance4f, p4, md4 = calculate_edit_distance4(detected_user_onsets, db_onsets, 1.8,
+                                                                      db_file_name)
         # distance_calculate_edit_distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5,
         #                                                                  db_file_name)  # tu trzeba pokombinować z tym Tm
         # # własne, nowe, odległość edycyjna
@@ -66,6 +67,10 @@ def compare_with_database(user_audio, database, show_user=False, show_database=F
         # calculate_dtw_librosa_onsets_próbkowanief, path = calculate_dtw_librosa_onsets_sampling(detected_user_onsets, db_onsets, db_file_name)
         # distance, path = calculate_dtw_librosa(detected_user_onsets, db_onsets, db_file_name)
         # calculate_dtwf = calculate_dtw(detected_user_onsets, db_onsets)
+        # mean_distance = calculate_edit_distance2(detected_user_onsets,db_onsets, 20, db_file_name)
+        distances.append((db_file_name, calculate_edit_distance4f))
+
+        # plot_onset_strength(onset_strength, db_file_name)
 
         if show_cost_function:
             # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False) # dtw - źle
@@ -77,17 +82,44 @@ def compare_with_database(user_audio, database, show_user=False, show_database=F
             # distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5, db_file_name, True)
             calculate_edit_distance2(detected_user_onsets, db_onsets, 2, db_file_name, True)
 
-        print(f'\nDistance from calculate_edit_distance4 between {user_audio} and {db_file_name}: {calculate_edit_distance4f}')#, mean distance: {mean_distance}')
+        print(f'Distance from calculate_edit_distance4 between {user_audio} and {db_file_name}: {calculate_edit_distance4f}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_edit_distance}')  # , mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets_edit_distance}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets2 between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets2}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets_próbkowanie between {user_audio} and {db_file_name}: {calculate_dtw_librosa_onsets_próbkowanief}')
         # print(f'Distance from calculate_dtw_librosa between {user_audio} and {db_file_name}: {distance}')  # , mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw (fastdtw) between {user_audio} and {db_file_name}: {calculate_dtwf}')
-
+        # print(f"Średnia odległość punktów na ścieżce od prostej between {user_audio} and {db_file_name}: {mean_distance}")
         # średnia odległość punktów od prostej
         # calculate_edit_distance2(detected_user_onsets,db_onsets, 2, db_file_name)
 
+    # top1_song = min(distances, key=lambda x: x[1])
+    # top1_song = max(distances, key=lambda x: x[1])
+    # print(f'\nTop 1 song is: {top1_song[0]} with distance: {top1_song[1]}')
+
+    sorted_distances = sorted(distances, key=lambda x: x[1])
+    print("\nTop 5 songs:")
+    for i, (song, distance) in enumerate(sorted_distances[:5], 1):
+        print(f'{i}. {song} with distance: {distance}')
+
+    # sorted_distances = sorted(distances, key=lambda x: x[1], reverse=True)
+    # print("\nTop 3 songs with the greatest distance:")
+    # for i, (song, distance) in enumerate(sorted_distances[:5], 1):
+    #     print(f'{i}. {song} with distance: {distance}')
+
+
+def load_database(folder_path):
+    audio_files = get_audio_files_in_folder(folder_path)
+    database_files = [{'file_path': file} for file in audio_files]
+    return database_files
+
+
+# database_path = r'D:\database'
+# database = load_database(database_path)
+# user_audio = r'D:\MIR-QBSH-corpus.tar\MIR-QBSH-corpus\waveFile\year2004a\person00008\00012.wav'
+#
+# # compare_with_database(user_audio, database, True, True, True)
+# compare_with_database(user_audio, database)
 
 def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, show_user=False, show_database=False,
                           show_cost_function=False):
@@ -99,7 +131,7 @@ def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, sh
         user_onset_strength = calculate_onset_strength(user_audio1[44100:], user_sr1, True)
     detected_user_onsets = detect_onsets_dynamic_threshold(user_onset_strength)
     # detected_user_onsets = load_onsets_mirex(user_audio)
-
+    distances = []
     for db_entry, db_onsets_entry in zip(database, database_onsets_files):
         db_file_path = db_entry['file_path']
         db_onsets_file_path = db_onsets_entry['file_path']
@@ -123,8 +155,8 @@ def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, sh
         # #z bazą FTIMSET
         # calculate_edit_distance4f, p4, md4 = calculate_edit_distance4(detected_user_onsets, db_onsets, 1.8,
         #                                                               db_file_name)
-        # distance_calculate_edit_distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5,
-        #                                                                  db_file_name)  # tu trzeba pokombinować z tym Tm
+        distance_calculate_edit_distance, path = calculate_edit_distance(detected_user_onsets, db_onsets, 2.5,
+                                                                         db_file_name)  # tu trzeba pokombinować z tym Tm
         # # własne, nowe, odległość edycyjna
         # distance_calculate_dtw_librosa_onsets_edit_distance, path = calculate_dtw_librosa_onsets_edit_distance(
         #     detected_user_onsets, db_onsets, db_file_name)
@@ -134,7 +166,7 @@ def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, sh
         # distance, path = calculate_dtw_librosa(detected_user_onsets, db_onsets, db_file_name)
         # calculate_dtwf = calculate_dtw(detected_user_onsets, db_onsets)
 
-
+        distances.append((db_file_name, distance_calculate_edit_distance))
         if show_cost_function:
             # distance, path = calculate_dtw_librosa_onsets2(detected_user_onsets, db_onsets, db_file_name, True, False) # dtw - źle
             # distance, path = calculate_dtw_librosa(user_onset_strength, onset_strength, db_file_name, True) # dtw - ok
@@ -151,7 +183,7 @@ def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, sh
         # print(f'Distance from calculate_edit_distance3 between {user_audio} and {db_file_name}: {calculate_edit_distance3f}')#, mean distance: {mean_distance}')
 
         # print(f'\nDistance from calculate_edit_distance4 between {user_audio} and {db_file_name}: {calculate_edit_distance4f}')#, mean distance: {mean_distance}')
-        # print(f'Distance from calculate_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_edit_distance}')  # , mean distance: {mean_distance}')
+        print(f'Distance from calculate_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_edit_distance}')  # , mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets_edit_distance}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets2 between {user_audio} and {db_file_name}: {distance_calculate_dtw_librosa_onsets2}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_dtw_librosa_onsets_próbkowanie between {user_audio} and {db_file_name}: {calculate_dtw_librosa_onsets_próbkowanief}')
@@ -160,6 +192,15 @@ def compare_with_databaseFTIMSET(user_audio, database, database_onsets_files, sh
 
         # średnia odległość punktów od prostej
         # calculate_edit_distance2(detected_user_onsets,db_onsets, 2, db_file_name)
+    sorted_distances = sorted(distances, key=lambda x: x[1])
+    print("\nTop 5 songs:")
+    for i, (song, distance) in enumerate(sorted_distances[:3], 1):
+        print(f'{i}. {song} with distance: {distance}')
+
+    # sorted_distances = sorted(distances, key=lambda x: x[1], reverse=True)
+    # print("\nTop 3 songs with the greatest distance:")
+    # for i, (song, distance) in enumerate(sorted_distances[:5], 1):
+    #     print(f'{i}. {song} with distance: {distance}')
 
 
 def compare_with_database_mirex(user_ons, database_onsets_files, show_cost_function=False):
@@ -228,7 +269,7 @@ mirex_ons = [{'file_path': file} for file in get_audio_files_in_folder(mirex_ons
 
 # compare_with_database('user_sequences/clarinet1.wav', database, database_onsets_files, False, False, False)
 # compare_with_database('user_sequences/tamburyn.wav', database, database_onsets_files, False, False, False)
-compare_with_databaseFTIMSET('user_sequences/classic3.wav', database_testowy, database_onsets_files_testowy, False, False, False)
+compare_with_databaseFTIMSET('user_sequences/clarinet2.wav', database_testowy, database_onsets_files_testowy, False, False, False)
 # compare_with_database('user_sequences/distguit.wav', database, database_onsets_files, False, False, False)
 # compare_with_database('violin.wav', database, database_onsets_files)
 # compare_with_database('user3.1.wav', database, database_onsets_files, False, False, True)
