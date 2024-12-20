@@ -29,7 +29,7 @@ def detect_onsets_dynamic_threshold(onset_strength, threshold_factor=0.02, fs=44
     average_strength = np.mean(onset_strength)
     std_strength = np.std(onset_strength)
 
-    # DYnamic treshlod - arythmetic mean and standard deviation
+    # Dynamic treshlod - arythmetic mean and standard deviation
     threshold = average_strength + threshold_factor * std_strength
 
     # Onset detection
