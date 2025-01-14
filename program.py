@@ -173,8 +173,6 @@ def compare_with_database_ons(user_audio, database, database_onsets_files, show_
 
         # print(f'Distance from edit_matrix between {user_audio} and {db_file_name}: {distance_edit_matrix}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_edit_distance2 (aligment to the line) between {user_audio} and {db_file_name}: {distance_calculate_edit_distance2}')#, mean distance: {mean_distance}')
-        # tu jest jakiś problem, chyba lepiej usunąć tę funkcję
-        # print(f'Distance from calculate_edit_distance3 between {user_audio} and {db_file_name}: {calculate_edit_distance3f}')#, mean distance: {mean_distance}')
 
         # print(f'\nDistance from calculate_edit_distance4 between {user_audio} and {db_file_name}: {calculate_edit_distance4f}')#, mean distance: {mean_distance}')
         # print(f'Distance from calculate_edit_distance between {user_audio} and {db_file_name}: {distance_calculate_edit_distance}')  # , mean distance: {mean_distance}')

@@ -1,0 +1,12 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core"]
+
+[tool.poetry]
+
+
+[tool.poetry.dependencies]
+
+PyAudio = "0.2.14"
+
+[tool.poetry.group.dev.dependencies]

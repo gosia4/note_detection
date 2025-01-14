@@ -8,11 +8,25 @@ def load_audio(file_path):
 
 
 def record_audio_pyaudio(filename, duration=10, fs=44100):
+    # import pyaudio
+    #
+    # p = pyaudio.PyAudio()
+    # for i in range(p.get_device_count()):
+    #     print(p.get_device_info_by_index(i))
+    # p.terminate()
+
     print("The recording has started...")
 
     p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=fs, input=True, frames_per_buffer=1024)
-
+    stream = p.open(format=pyaudio.paInt16,input_device_index=3, channels=1, rate=fs, input=True, frames_per_buffer=1024)
+    # stream = p.open(
+    #     format=pyaudio.paInt16,
+    #     channels=1,
+    #     rate=44100,
+    #     input=True,
+    #     input_device_index=1,  # Zamień na index Twojego mikrofonu
+    #     frames_per_buffer=1024
+    # )
     frames = []
     for i in range(0, int(fs / 1024 * duration)):
         data = stream.read(1024)
